@@ -1,0 +1,39 @@
+name: LockIn 앱 만들기
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: zip 풀기
+        run: unzip -o lockin-src.zip -d src
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: APK 만들기
+        working-directory: src
+        run: gradle assembleRelease --no-daemon
+
+      - name: 다운로드 페이지에 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp src/app/build/outputs/apk/release/app-release.apk LockIn.apk
+          gh release create "v${{ github.run_number }}" LockIn.apk \
+            --title "LockIn ${{ github.run_number }}" \
+            --notes "LockIn.apk를 눌러서 받은 뒤 설치하세요."
